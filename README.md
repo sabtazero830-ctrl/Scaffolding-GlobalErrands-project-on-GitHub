@@ -1,4 +1,3 @@
-
 # GlobalErrands
 
 Production-ready scaffold for GlobalErrands — a global grocery, retail, pharmacy, and errand delivery platform.
