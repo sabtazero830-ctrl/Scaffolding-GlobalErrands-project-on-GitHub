@@ -1,5 +1,4 @@
 
-On-demand ride-hailing and delivery platform — Flutter mobile app, Next.js admin dashboard, NestJS backend with real-time tracking and multi-provider payments.
 # GlobalErrands
 
 Production-ready scaffold for GlobalErrands — a global grocery, retail, pharmacy, and errand delivery platform.

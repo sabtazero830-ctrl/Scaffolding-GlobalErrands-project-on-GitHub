@@ -1,0 +1,512 @@
+openapi: 3.0.3
+info:
+  title: GlobalErrands API
+  description: "OpenAPI 3.0 specification for GlobalErrands — auth, users, stores, products, carts, orders, drivers, payments, webhooks. Use this spec to generate server stubs and client SDKs."
+  version: "0.1.0"
+servers:
+  - url: https://api.example.com
+  - url: http://localhost:3000/api
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+    AuthRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          example: 3600
+        user:
+          $ref: '#/components/schemas/User'
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        role:
+          type: string
+          description: user role (customer, store_owner, driver, admin)
+        createdAt:
+          type: string
+          format: date-time
+    Store:
+      type: object
+      properties:
+        id:
+          type: integer
+        ownerId:
+          type: integer
+        name:
+          type: string
+        country:
+          type: string
+        city:
+          type: string
+        address:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        storeId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: float
+        currency:
+          type: string
+          example: USD
+        stock:
+          type: integer
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        createdAt:
+          type: string
+          format: date-time
+    CartItem:
+      type: object
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: integer
+        price:
+          type: number
+          format: float
+    Cart:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        subtotal:
+          type: number
+          format: float
+        currency:
+          type: string
+    OrderItem:
+      type: object
+      properties:
+        productId:
+          type: integer
+        name:
+          type: string
+        qty:
+          type: integer
+        price:
+          type: number
+          format: float
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        customerId:
+          type: integer
+        storeId:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        status:
+          type: string
+          example: pending
+        totalAmount:
+          type: number
+          format: float
+        currency:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    DriverLocation:
+      type: object
+      properties:
+        driverId:
+          type: integer
+        latitude:
+          type: number
+        longitude:
+          type: number
+        heading:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+    PaymentIntentRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          description: amount in smallest currency unit (cents)
+        currency:
+          type: string
+        metadata:
+          type: object
+    PaymentIntentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        client_secret:
+          type: string
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                phone:
+                  type: string
+                role:
+                  type: string
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /auth/login:
+    post:
+      summary: Login and receive JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Unauthorized
+  /users/{userId}:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get user profile
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: Not Found
+  /stores:
+    get:
+      summary: List stores (paginated)
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+          example: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+          example: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Store'
+                  meta:
+                    type: object
+    post:
+      security:
+        - bearerAuth: []
+      summary: Create a new store (store_owner only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Store'
+      responses:
+        '201':
+          description: Created
+  /stores/{storeId}:
+    get:
+      summary: Get store details
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+  /stores/{storeId}/products:
+    get:
+      summary: List products for a store
+      parameters:
+        - in: path
+          name: storeId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+    post:
+      security:
+        - bearerAuth: []
+      summary: Create a product in a store
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+      responses:
+        '201':
+          description: Created
+  /products/{productId}:
+    get:
+      summary: Get product detail
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+  /cart:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get current user's cart
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+    post:
+      security:
+        - bearerAuth: []
+      summary: Add item to cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productId, quantity]
+              properties:
+                productId:
+                  type: integer
+                quantity:
+                  type: integer
+      responses:
+        '200':
+          description: Item added
+  /orders:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Place an order (checkout)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cartId, paymentMethod]
+              properties:
+                cartId:
+                  type: integer
+                paymentMethod:
+                  type: string
+                deliveryAddress:
+                  type: object
+      responses:
+        '201':
+          description: Order placed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+    get:
+      security:
+        - bearerAuth: []
+      summary: List user's orders
+      responses:
+        '200':
+          description: OK
+  /orders/{orderId}:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get order details
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+  /drivers/{driverId}/location:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Update driver location (driver authenticated)
+      parameters:
+        - in: path
+          name: driverId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverLocation'
+      responses:
+        '200':
+          description: Location updated
+  /payments/create-intent:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Create a Stripe PaymentIntent (server-side)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentIntentRequest'
+      responses:
+        '200':
+          description: PaymentIntent created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentIntentResponse'
+  /payments/webhook:
+    post:
+      summary: Stripe webhook endpoint (no auth — use webhook signing)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Received
+security:
+  - bearerAuth: []

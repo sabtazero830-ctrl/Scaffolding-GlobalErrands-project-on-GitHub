@@ -1,0 +1,9 @@
+This scaffold was generated automatically.
+Edit .env (copy from env.example) before running the services.
+To run locally:
+  1. docker-compose up -d
+  2. cd backend && npm ci && npm run start:dev
+  3. cd ../web && npm ci && npm run dev
+  4. cd ../mobile && flutter pub get && flutter run
+
+See README.md for more details.
